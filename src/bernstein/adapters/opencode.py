@@ -16,6 +16,26 @@ logger = logging.getLogger(__name__)
 
 _OPENCODE_AUTH_FILE = Path.home() / ".local" / "share" / "opencode" / "auth.json"
 
+# Map Bernstein shorthand to OpenCode model names (FREE models use default)
+MODEL_MAP = {
+    "opus": None,  # Use default (free)
+    "sonnet": None,
+    "haiku": None,
+    "gpt-5.4": "gpt-5-nano",
+    "gpt-5": "gpt-5-nano",
+    "gpt-4": "gpt-5-nano",
+    "o4-mini": None,
+    "o4": "gpt-5-nano",
+}
+
+
+def _get_opencode_model(model_id: str) -> list[str]:
+    """Build OpenCode command args. If model is None, use default (free)."""
+    mapped = MODEL_MAP.get(model_id, model_id)
+    if mapped is None:
+        return ["opencode", "run", "--format", "json"]
+    return ["opencode", "run", "-m", mapped, "--format", "json"]
+
 
 class OpenCodeAdapter(CLIAdapter):
     """Spawn and monitor OpenCode CLI sessions."""
@@ -44,15 +64,20 @@ class OpenCodeAdapter(CLIAdapter):
         if mcp_config:
             logger.debug("OpenCodeAdapter ignoring runtime MCP config injection for session %s", session_id)
 
-        cmd = [
-            "opencode",
-            "run",
-            "-m",
-            model_config.model,
-            "--format",
-            "json",
-            prompt,
-        ]
+        # Map Bernstein shorthand to OpenCode model names (FREE models use default)
+        model_id = model_config.model
+        if "/" in model_id:
+            model_id = model_id.split("/")[-1]
+
+        # Map shorthand to full OpenCode model name
+        if model_id in MODEL_MAP:
+            model_id = MODEL_MAP[model_id]
+
+        # Log what we're using for debugging
+        logger.info(f"OpenCodeAdapter: original model='{model_config.model}', using='{model_id or 'default (free)'}'")
+
+        cmd = _get_opencode_model(model_id)
+        cmd.append(prompt)
 
         pid_dir = workdir / ".sdd" / "runtime" / "pids"
         wrapped_cmd = build_worker_cmd(
