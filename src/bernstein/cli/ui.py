@@ -142,10 +142,17 @@ class AgentInfo:
         Returns:
             Populated AgentInfo instance.
         """
+        # Handle model field being a dict (from router) or string
+        model_val = data.get("model", "")
+        if isinstance(model_val, dict):
+            model_str = model_val.get("model", "") if model_val else ""
+        else:
+            model_str = str(model_val)
+        
         return cls(
             agent_id=str(data.get("id", "")),
             role=str(data.get("role", "")),
-            model=str(data.get("model", "")),
+            model=model_str,
             status=str(data.get("status", "idle")),
             task_ids=[str(t) for t in cast("list[str]", data.get("task_ids") or [])],
             runtime_s=float(data.get("runtime_s", 0.0)),
