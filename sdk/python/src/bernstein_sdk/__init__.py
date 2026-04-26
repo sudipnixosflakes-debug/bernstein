@@ -14,8 +14,18 @@ Quickstart::
         priority=1,
     )
     print(task.id, task.status)
+
+Convenience functions::
+
+    from bernstein_sdk import hello, health
+
+    print(hello())           # "Hello, world!"
+    print(health())         # True if server is healthy
 """
 
+from __future__ import annotations
+
+from bernstein_sdk.api import health, hello
 from bernstein_sdk.client import BernsteinClient
 from bernstein_sdk.models import (
     TaskCreate,
@@ -40,6 +50,8 @@ __all__ = [
     "BernsteinToLinear",
     "JiraToBernstein",
     "LinearToBernstein",
+    "hello",
+    "health",
 ]
 
 __version__ = "0.1.0"
