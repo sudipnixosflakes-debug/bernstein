@@ -366,13 +366,20 @@ def _inject_manager_task(
     """
     task = seed_to_initial_task(seed, workdir=workdir)
 
+    # Choose role based on CLI adapter - use direct coding roles for simple CLIs
+    cli = seed.cli or "auto"
+    role = "manager"  # Default for complex orchestration
+    if cli in ("opencode", "aider", "claude", "codex", "gemini", "qwen"):
+        # Use backend role for direct coding agents (skip manager decomposition)
+        role = "backend"
+
     payload: dict[str, Any] = {
-        "title": "Plan and decompose goal into tasks",
-        "role": "manager",
+        "title": "Plan and decompose goal into tasks" if role == "manager" else "Execute task",
+        "role": role,
         "description": task.description,
         "priority": 1,
-        "scope": "large",
-        "complexity": "high",
+        "scope": "large" if role == "manager" else "small",
+        "complexity": "high" if role == "manager" else "low",
         "model": "opus",
         "effort": "max",
     }
@@ -389,7 +396,7 @@ def _inject_manager_task(
         timeout=5.0,
     )
     if resp.status_code != 201:
-        raise RuntimeError(f"Failed to create manager task: {resp.status_code} {resp.text}")
+        raise RuntimeError(f"Failed to create initial task: {resp.status_code} {resp.text}")
 
     data: dict[str, Any] = resp.json()
     return str(data.get("id", "unknown"))
